@@ -1,15 +1,15 @@
 name: Daily Paper Bot
 on:
   schedule:
-    - cron: '30 2 * * *' # सुबह 8:00 AM IST
-  workflow_dispatch: # मैन्युअल बटन के लिए
+    - cron: '30 2 * * *'
+  workflow_dispatch:
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v4 # v3 से v4 कर दिया
+      - uses: actions/setup-python@v5 # v4 से v5 कर दिया
         with:
           python-version: '3.9'
       - run: pip install -r requirements.txt
