@@ -1,4 +1,4 @@
-import requests
+ import requests
 import re
 import img2pdf
 import asyncio
@@ -11,24 +11,22 @@ CHAT_ID = "5412252920"
 
 bot = Bot(token=BOT_TOKEN)
 
-# -------- HI TEST REPLY --------
-
+# ---------- HI TEST ----------
 async def hi_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text.lower()
 
     if "hi" in text:
         name = update.message.from_user.first_name
-        await update.message.reply_text(f"😊 You are welcome {name}")
+        await update.message.reply_text(f"You are welcome {name}")
 
-# -------- EPAPER DOWNLOAD --------
 
+# ---------- EPAPER ----------
 async def check_epaper():
 
     today = datetime.now().strftime('%d %b %Y')
 
     url = "https://epaper.amritvichar.com/category/10/shahjahanpur-budaun-kasganj"
-
     headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
@@ -77,20 +75,20 @@ async def check_epaper():
 
     except Exception as e:
 
-        await bot.send_message(chat_id=CHAT_ID, text=f"⚠️ Error: {e}")
+        await bot.send_message(chat_id=CHAT_ID, text=f"Error: {e}")
 
-# -------- SCHEDULER --------
 
+# ---------- SCHEDULER ----------
 async def scheduler():
 
     while True:
 
         await check_epaper()
 
-        await asyncio.sleep(600)   # हर 10 मिनट check
+        await asyncio.sleep(600)
 
-# -------- MAIN --------
 
+# ---------- MAIN ----------
 async def main():
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -99,9 +97,13 @@ async def main():
 
     asyncio.create_task(scheduler())
 
-    print("Bot Running...")
+    await app.initialize()
+    await app.start()
+    await app.updater.start_polling()
 
-    await app.run_polling()
+    while True:
+        await asyncio.sleep(3600)
+
 
 if __name__ == "__main__":
     asyncio.run(main())
