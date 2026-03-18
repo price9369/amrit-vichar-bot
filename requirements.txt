@@ -1,3 +1,4 @@
 requests
 img2pdf
 python-telegram-bot
+beautifulsoup4
