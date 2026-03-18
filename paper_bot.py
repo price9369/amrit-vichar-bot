@@ -42,7 +42,6 @@ async def get_amar_ujala():
         city = "shahjahanpur"
         headers = {"User-Agent": "Mozilla/5.0"}
         au_images = []
-        # Pages ko 16 tak limit kiya hai speed ke liye
         for i in range(1, 17):
             p = str(i).zfill(2)
             page_url = f"https://epaper.amarujala.com/{city}/{date_au}/{p}.html?format=img&ed_code={city}"
@@ -54,7 +53,7 @@ async def get_amar_ujala():
                     img_data = requests.get(img_tag, headers={"User-Agent": "Mozilla/5.0", "Referer": page_url}, timeout=7).content
                     au_images.append(img_data)
                 else:
-                    break # Agla page nahi hai to ruk jao
+                    break 
             except:
                 continue
         if au_images:
@@ -69,10 +68,11 @@ async def get_amar_ujala():
 # --- BOT COMMANDS ---
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Yahan correction kiya gaya hai: callback_data
     keyboard = [
-        [InlineKeyboardButton("📰 Amrit Vichar Download", callback_query_data='av')],
-        [InlineKeyboardButton("📰 Amar Ujala Download", callback_query_data='au')],
-        [InlineKeyboardButton("🃏 Funny Quote", callback_query_data='funny')]
+        [InlineKeyboardButton("📰 Amrit Vichar Download", callback_data='av')],
+        [InlineKeyboardButton("📰 Amar Ujala Download", callback_data='au')],
+        [InlineKeyboardButton("🃏 Funny Quote", callback_data='funny')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     welcome_msg = (
@@ -92,46 +92,39 @@ async def handle_buttons(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.message.reply_text(random.choice(jokes))
         return
 
-    # User ko update dena
     paper_name = "Amrit Vichar" if query.data == 'av' else "Amar Ujala"
-    status_msg = await query.edit_message_text(text=f"⏳ {paper_name} download ho raha hai... (Isme 1-2 minute lag sakte hain)")
+    status_msg = await query.edit_message_text(text=f"⏳ {paper_name} download ho raha hai... (Wait 1-2 min)")
 
-    # Download shuru
     file = await get_amrit_vichar() if query.data == 'av' else await get_amar_ujala()
 
     if file:
         await context.bot.send_document(
             chat_id=query.message.chat_id, 
             document=open(file, 'rb'), 
-            caption=f"✅ {paper_name} taiyar hai!\n🧹 Server cleaned."
+            caption=f"✅ {paper_name} taiyar hai!\n🧹 Memory Cleaned."
         )
-        os.remove(file) # File delete taaki server clean rahe
+        os.remove(file) 
     else:
-        await context.bot.send_message(chat_id=query.message.chat_id, text="❌ Maafi chahta hoon! Aaj ka paper website par nahi mila.")
+        await context.bot.send_message(chat_id=query.message.chat_id, text="❌ Maafi! Aaj ka paper nahi mila.")
 
-# --- AUTO MODE (SCHEDULED) ---
+# --- AUTO MODE ---
 
 async def auto_mode():
     bot = Bot(token=BOT_TOKEN)
-    await bot.send_message(chat_id=CHAT_ID, text="☀️ Good Morning! Aaj ke papers download kiye ja rahe hain...")
-    
-    papers = [("Amrit Vichar", get_amrit_vichar), ("Amar Ujala", get_amar_ujala)]
-    for name, func in papers:
+    await bot.send_message(chat_id=CHAT_ID, text="☀️ Good Morning! Aaj ke papers ready hain.")
+    for name, func in [("Amrit Vichar", get_amrit_vichar), ("Amar Ujala", get_amar_ujala)]:
         file = await func()
         if file:
             await bot.send_document(chat_id=CHAT_ID, document=open(file, 'rb'), caption=f"📰 {name}")
             os.remove(file)
-    print("Auto run complete.")
 
 if __name__ == "__main__":
     import sys
-    # Agar GitHub Action se '--auto' command aaye
     if len(sys.argv) > 1 and sys.argv[1] == "--auto":
         asyncio.run(auto_mode())
     else:
-        # Normal Bot Mode (Manual Command ke liye)
         app = Application.builder().token(BOT_TOKEN).build()
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CallbackQueryHandler(handle_buttons))
-        print("Bot is listening for commands...")
+        print("Bot is listening...")
         app.run_polling()
