@@ -11,7 +11,6 @@ CHAT_ID = "5412252920"
 
 bot = Bot(token=BOT_TOKEN)
 
-# ---------- HI TEST ----------
 async def hi_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = update.message.text.lower()
@@ -21,64 +20,57 @@ async def hi_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"You are welcome {name}")
 
 
-# ---------- EPAPER ----------
 async def check_epaper():
 
     today = datetime.now().strftime('%d %b %Y')
 
     url = "https://epaper.amritvichar.com/category/10/shahjahanpur-budaun-kasganj"
+
     headers = {"User-Agent": "Mozilla/5.0"}
 
-    try:
+    r = requests.get(url, headers=headers)
 
-        r = requests.get(url, headers=headers)
+    links = re.findall(r'href="([^"]*view/(\d+)/[^"]+)"', r.text)
 
-        links = re.findall(r'href="([^"]*view/(\d+)/[^"]+)"', r.text)
+    if not links:
+        return
 
-        if not links:
-            return
+    latest = links[0][0]
 
-        latest = links[0][0]
+    if not latest.startswith("http"):
+        latest = "https://epaper.amritvichar.com" + latest
 
-        if not latest.startswith("http"):
-            latest = "https://epaper.amritvichar.com" + latest
+    html = requests.get(latest, headers=headers).text
 
-        html = requests.get(latest, headers=headers).text
+    pages = sorted(set(re.findall(r'page-\d+-\d+\.jpg', html)))
 
-        pages = sorted(set(re.findall(r'page-\d+-\d+\.jpg', html)))
+    if not pages:
+        return
 
-        if not pages:
-            return
+    images = []
 
-        images = []
+    folder = datetime.now().strftime("%Y-%m")
 
-        folder = datetime.now().strftime("%Y-%m")
+    for p in pages:
 
-        for p in pages:
+        img_url = f"https://epaper.amritvichar.com/media/{folder}/{p}"
 
-            img_url = f"https://epaper.amritvichar.com/media/{folder}/{p}"
+        img = requests.get(img_url, headers=headers).content
 
-            img = requests.get(img_url, headers=headers).content
+        images.append(img)
 
-            images.append(img)
+    pdf_name = f"Amrit_Vichar_{datetime.now().strftime('%d_%m_%Y')}.pdf"
 
-        pdf_name = f"Amrit_Vichar_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+    with open(pdf_name, "wb") as f:
+        f.write(img2pdf.convert(images))
 
-        with open(pdf_name, "wb") as f:
-            f.write(img2pdf.convert(images))
-
-        await bot.send_document(
-            chat_id=CHAT_ID,
-            document=open(pdf_name, "rb"),
-            caption=f"📰 Amrit Vichar\n📅 {today}"
-        )
-
-    except Exception as e:
-
-        await bot.send_message(chat_id=CHAT_ID, text=f"Error: {e}")
+    await bot.send_document(
+        chat_id=CHAT_ID,
+        document=open(pdf_name, "rb"),
+        caption=f"📰 Amrit Vichar\n📅 {today}"
+    )
 
 
-# ---------- SCHEDULER ----------
 async def scheduler():
 
     while True:
@@ -88,7 +80,6 @@ async def scheduler():
         await asyncio.sleep(600)
 
 
-# ---------- MAIN ----------
 async def main():
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
@@ -97,12 +88,7 @@ async def main():
 
     asyncio.create_task(scheduler())
 
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
-
-    while True:
-        await asyncio.sleep(3600)
+    await app.run_polling()
 
 
 if __name__ == "__main__":
