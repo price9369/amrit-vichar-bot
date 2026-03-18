@@ -1,5 +1,8 @@
- import requests, re, img2pdf, asyncio
-from datetime import datetime, time
+import requests
+import re
+import img2pdf
+import asyncio
+from datetime import datetime
 from telegram import Bot, Update
 from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 
@@ -8,7 +11,7 @@ CHAT_ID = "5412252920"
 
 bot = Bot(token=BOT_TOKEN)
 
-# ---------- HI REPLY FUNCTION ----------
+# -------- HI TEST REPLY --------
 
 async def hi_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -18,41 +21,36 @@ async def hi_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         name = update.message.from_user.first_name
         await update.message.reply_text(f"😊 You are welcome {name}")
 
-# ---------- EPAPER FUNCTION ----------
+# -------- EPAPER DOWNLOAD --------
 
 async def check_epaper():
 
     today = datetime.now().strftime('%d %b %Y')
 
-    target_url = "https://epaper.amritvichar.com/category/10/shahjahanpur-budaun-kasganj"
+    url = "https://epaper.amritvichar.com/category/10/shahjahanpur-budaun-kasganj"
 
     headers = {"User-Agent": "Mozilla/5.0"}
 
     try:
 
-        resp = requests.get(target_url, headers=headers, timeout=20)
+        r = requests.get(url, headers=headers)
 
-        links = re.findall(r'href="([^"]*view/(\d+)/[^"]+)"', resp.text)
+        links = re.findall(r'href="([^"]*view/(\d+)/[^"]+)"', r.text)
 
         if not links:
-            return False
+            return
 
-        latest_url = links[0][0]
+        latest = links[0][0]
 
-        if not latest_url.startswith("http"):
-            latest_url = "https://epaper.amritvichar.com" + latest_url
+        if not latest.startswith("http"):
+            latest = "https://epaper.amritvichar.com" + latest
 
-        page_html = requests.get(latest_url, headers=headers).text
+        html = requests.get(latest, headers=headers).text
 
-        pages = sorted(set(re.findall(r'page-\d+-\d+\.jpg', page_html)))
+        pages = sorted(set(re.findall(r'page-\d+-\d+\.jpg', html)))
 
         if not pages:
-            return False
-
-        await bot.send_message(
-            chat_id=CHAT_ID,
-            text=f"📰 आज का अमृत विचार मिल गया\n📄 Pages: {len(pages)}\nPDF बना रहा हूँ..."
-        )
+            return
 
         images = []
 
@@ -77,37 +75,21 @@ async def check_epaper():
             caption=f"📰 Amrit Vichar\n📅 {today}"
         )
 
-        return True
-
     except Exception as e:
 
         await bot.send_message(chat_id=CHAT_ID, text=f"⚠️ Error: {e}")
 
-        return False
-
-# ---------- SCHEDULER ----------
+# -------- SCHEDULER --------
 
 async def scheduler():
 
     while True:
 
-        now = datetime.now().time()
+        await check_epaper()
 
-        start = time(6, 0)
+        await asyncio.sleep(600)   # हर 10 मिनट check
 
-        if now >= start:
-
-            print("Checking paper...")
-
-            found = await check_epaper()
-
-            if found:
-                print("Paper sent")
-                break
-
-        await asyncio.sleep(600)  # 10 minutes
-
-# ---------- MAIN ----------
+# -------- MAIN --------
 
 async def main():
 
